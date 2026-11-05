@@ -132,6 +132,9 @@ Self Healing Infrastructure System/
 │   ├── Dockerfile               # Node 20 production container
 │   ├── package.json
 │   └── server.js                # Express server entry point
+├── docs/
+│   └── images/
+│       └── cicd-pipeline.png    # CI/CD workflow flowchart
 ├── frontend/
 │   ├── src/
 │   │   ├── components/          # Reusable UI & layout modules
@@ -288,6 +291,8 @@ The Kubernetes ReplicaSet controller continually reconciles desired state (3 bac
 ## 🚀 CI/CD Pipeline (GitHub Actions)
 
 An automated continuous integration workflow is configured at [`.github/workflows/ci.yml`](file:///c:/Private/Hands-On/Self%20Healing%20Infrastructure%20System/.github/workflows/ci.yml). It validates every commit and pull request on Ubuntu runners without requiring paid cloud infrastructure or secrets.
+
+![ShopSphere CI/CD Workflow](docs/images/cicd-pipeline.png)
 
 ### Pipeline Stages
 1. **Frontend Job**:
