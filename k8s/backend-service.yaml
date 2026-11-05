@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    app: shopsphere-backend
+    tier: api
+spec:
+  type: ClusterIP
+  selector:
+    app: shopsphere-backend
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      protocol: TCP

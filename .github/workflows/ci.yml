@@ -1,0 +1,85 @@
+name: ShopSphere CI/CD
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  # 1. Frontend: Install dependencies, lint/check, and compile Vite production build
+  frontend:
+    name: Build & Test Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Build React Application
+        run: npm run build
+
+  # 2. Backend: Install dependencies and execute syntax/integrity checks
+  backend:
+    name: Verify Backend API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package.json
+
+      - name: Install Backend Dependencies
+        run: npm install
+
+      - name: Run Backend Syntax & Health Check
+        run: npm test
+
+  # 3. Docker: Validate container image builds for both services
+  docker-images:
+    name: Build Docker Containers
+    needs: [frontend, backend]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker Image
+        run: |
+          docker build -t shopsphere-backend:test ./backend
+          echo "Backend Docker image built successfully."
+
+      - name: Build Frontend Docker Image
+        run: |
+          docker build -t shopsphere-frontend:test ./frontend
+          echo "Frontend Docker image built successfully."
+
+      - name: Verify Built Images
+        run: |
+          docker images | grep shopsphere
