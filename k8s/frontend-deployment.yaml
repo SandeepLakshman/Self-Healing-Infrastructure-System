@@ -6,7 +6,7 @@ metadata:
     app: shopsphere-frontend
     tier: web
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: shopsphere-frontend

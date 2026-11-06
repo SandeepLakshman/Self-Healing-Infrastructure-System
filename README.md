@@ -7,7 +7,7 @@
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS_3-38B2AC?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
-**ShopSphere** is a high-availability, production-style e-commerce web application engineered with a modern monochrome glassmorphism frontend, an Express REST API backend, Docker multi-stage containerization, a 3-replica **Kubernetes self-healing infrastructure** with automated health probes, and an automated **GitHub Actions CI/CD pipeline**.
+**ShopSphere** is a high-availability, production-style e-commerce web application engineered with a modern monochrome glassmorphism frontend (2 replicas), an Express REST API backend, Docker multi-stage containerization, a 3-replica **Kubernetes self-healing infrastructure** with automated health probes, and an automated **GitHub Actions CI/CD pipeline**.
 
 ---
 
@@ -47,38 +47,40 @@ The primary objectives of this project are:
         │  kubectl port-forward svc/frontend 8080:80
         │  (host port 8080 → pod port 80, local dev access)
         ▼
-┌────────────────────────────────────────────────────────┐
-│ Kubernetes Node / Minikube                             │
-│                                                        │
-│  [ Service: frontend ]                                 │
-│    NodePort 30080 → pod port 80 (direct node access)  │
-│    Port-forward: 8080 → pod port 80 (dev access)      │
-│                          │                             │
-│                          ▼                             │
-│           ┌─────────────────────────────┐              │
-│           │ Pod: shopsphere-frontend    │              │
-│           │ (Nginx: Alpine + React SPA) │              │
-│           └──────────────┬──────────────┘              │
-│                          │ /api/ reverse proxy         │
-│                          ▼                             │
-│           [ Service: backend (ClusterIP :5000) ]       │
-│             (Round-robin load balancing)               │
-│               ┌──────────┼──────────┐                  │
-│               │          │          │                  │
-│               ▼          ▼          ▼                  │
-│          ┌─────────┐┌─────────┐┌─────────┐             │
-│          │ Replica ││ Replica ││ Replica │             │
-│          │ Pod 1   ││ Pod 2   ││ Pod 3   │             │
-│          │ (:5000) ││ (:5000) ││ (:5000) │             │
-│          └─────────┘└─────────┘└─────────┘             │
-│               ▲          ▲          ▲                  │
-│               └──────────┴──────────┘                  │
-│             Automated Liveness/Readiness               │
-│             HTTP GET /api/health Probes                │
-└────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ Kubernetes Node / Minikube                                      │
+│                                                                 │
+│  [ Service: frontend ]                                          │
+│    NodePort 30080 → pod port 80 (direct node access)           │
+│    Port-forward: 8080 → pod port 80 (dev access)               │
+│             │                               │                   │
+│             ▼                               ▼                   │
+│  ┌─────────────────────────┐   ┌─────────────────────────┐      │
+│  │ Pod: frontend-replica-1 │   │ Pod: frontend-replica-2 │      │
+│  │ (Nginx: React SPA)      │   │ (Nginx: React SPA)      │      │
+│  └──────────┬──────────────┘   └────────────┬────────────┘      │
+│             │                               │                   │
+│             └───────────────┬───────────────┘                   │
+│                             │ /api/ reverse proxy               │
+│                             ▼                                   │
+│              [ Service: backend (ClusterIP :5000) ]             │
+│                (Round-robin load balancing)                     │
+│                  ┌──────────┼──────────┐                        │
+│                  │          │          │                        │
+│                  ▼          ▼          ▼                        │
+│             ┌─────────┐┌─────────┐┌─────────┐                   │
+│             │ Replica ││ Replica ││ Replica │                   │
+│             │ Pod 1   ││ Pod 2   ││ Pod 3   │                   │
+│             │ (:5000) ││ (:5000) ││ (:5000) │                   │
+│             └─────────┘└─────────┘└─────────┘                   │
+│                  ▲          ▲          ▲                        │
+│                  └──────────┴──────────┘                        │
+│                Automated Liveness/Readiness                     │
+│                HTTP GET /api/health Probes                      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Frontend Tier**: Nginx serves the compiled static React SPA and acts as an internal API Gateway proxying `/api/*` calls to `http://backend:5000/api/*`.
+- **Frontend Tier**: 2 replicas of Nginx serving the compiled static React SPA and acting as an internal API Gateway proxying `/api/*` calls to `http://backend:5000/api/*`.
 - **Backend Tier**: Express REST API running across 3 pods in a Kubernetes Deployment. Each pod reports its unique pod name (`HOSTNAME`), memory consumption, and uptime.
 - **Service Discovery**: Kubernetes CoreDNS resolves `backend:5000` to the internal ClusterIP service, transparently load-balancing traffic across all ready replica pods.
 
@@ -154,7 +156,7 @@ Self Healing Infrastructure System/
 ├── k8s/
 │   ├── backend-deployment.yaml  # 3 replicas, liveness & readiness probes
 │   ├── backend-service.yaml     # Internal ClusterIP service on port 5000
-│   ├── frontend-deployment.yaml # Nginx frontend pod deployment
+│   ├── frontend-deployment.yaml # Nginx frontend pod deployment (2 replicas)
 │   └── frontend-service.yaml    # NodePort service on port 30080
 ├── scripts/
 │   └── build_readme_html.js     # Generates standalone README.html
@@ -222,7 +224,7 @@ docker compose down
 
 ## ☸️ Kubernetes Deployment (Minikube)
 
-The production configuration runs the application on Kubernetes with **3 backend replicas** and automated health monitoring.
+The production configuration runs the application on Kubernetes with **2 frontend replicas**, **3 backend replicas**, and automated health monitoring.
 
 ### 1. Start Minikube & Load Images
 ```bash
@@ -253,6 +255,7 @@ shopsphere-backend-545cb97f88-4g7l5    1/1     Running   0          10.244.0.11 
 shopsphere-backend-545cb97f88-cp4sn    1/1     Running   0          10.244.0.16   minikube
 shopsphere-backend-545cb97f88-nx755    1/1     Running   0          10.244.0.10   minikube
 shopsphere-frontend-7dd7bbf55f-9c2r5   1/1     Running   0          10.244.0.15   minikube
+shopsphere-frontend-7dd7bbf55f-k8x2m   1/1     Running   0          10.244.0.17   minikube
 ```
 
 ### 4. Health Probes Configuration

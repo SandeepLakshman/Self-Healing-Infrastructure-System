@@ -125,13 +125,13 @@ const htmlContent = `<!DOCTYPE html>
 
     <div class="badge-row">
       <span class="badge badge-docker">Docker Multi-Stage</span>
-      <span class="badge badge-k8s">Kubernetes Minikube (3 Replicas)</span>
+      <span class="badge badge-k8s">Kubernetes Minikube (2 Frontend + 3 Backend Replicas)</span>
       <span class="badge badge-node">Node.js 20 LTS Express</span>
       <span class="badge badge-react">React 18 + Vite 5</span>
       <span class="badge badge-tailwind">Tailwind CSS 3</span>
     </div>
 
-    <p><strong>ShopSphere</strong> is a high-availability, production-style e-commerce web application engineered with a modern monochrome glassmorphism frontend, an Express REST API backend, Docker multi-stage containerization, a 3-replica <strong>Kubernetes self-healing infrastructure</strong> with automated health probes, and an automated <strong>GitHub Actions CI/CD pipeline</strong>.</p>
+    <p><strong>ShopSphere</strong> is a high-availability, production-style e-commerce web application engineered with a modern monochrome glassmorphism frontend (2 replicas), an Express REST API backend, Docker multi-stage containerization, a 3-replica <strong>Kubernetes self-healing infrastructure</strong> with automated health probes, and an automated <strong>GitHub Actions CI/CD pipeline</strong>.</p>
 
     <hr/>
 
@@ -147,35 +147,41 @@ const htmlContent = `<!DOCTYPE html>
     <h2>🏛️ System Architecture</h2>
 <pre>
 [ Client Browser ]
-        │ (Port 8080)
+        │
+        │  kubectl port-forward svc/frontend 8080:80
+        │  (host port 8080 → pod port 80, local dev access)
         ▼
-┌────────────────────────────────────────────────────────┐
-│ Kubernetes Node / Minikube                             │
-│                                                        │
-│  [ Service: frontend (NodePort 30080 -> 80) ]          │
-│                          │                             │
-│                          ▼                             │
-│           ┌─────────────────────────────┐              │
-│           │ Pod: shopsphere-frontend    │              │
-│           │ (Nginx: Alpine + React SPA) │              │
-│           └──────────────┬──────────────┘              │
-│                          │ /api/ reverse proxy         │
-│                          ▼                             │
-│           [ Service: backend (ClusterIP :5000) ]       │
-│             (Round-robin load balancing)               │
-│               ┌──────────┼──────────┐                  │
-│               │          │          │                  │
-│               ▼          ▼          ▼                  │
-│          ┌─────────┐┌─────────┐┌─────────┐             │
-│          │ Replica ││ Replica ││ Replica │             │
-│          │ Pod 1   ││ Pod 2   ││ Pod 3   │             │
-│          │ (:5000) ││ (:5000) ││ (:5000) │             │
-│          └─────────┘└─────────┘└─────────┘             │
-│               ▲          ▲          ▲                  │
-│               └──────────┴──────────┘                  │
-│             Automated Liveness/Readiness               │
-│             HTTP GET /api/health Probes                │
-└────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ Kubernetes Node / Minikube                                      │
+│                                                                 │
+│  [ Service: frontend ]                                          │
+│    NodePort 30080 → pod port 80 (direct node access)           │
+│    Port-forward: 8080 → pod port 80 (dev access)               │
+│             │                               │                   │
+│             ▼                               ▼                   │
+│  ┌─────────────────────────┐   ┌─────────────────────────┐      │
+│  │ Pod: frontend-replica-1 │   │ Pod: frontend-replica-2 │      │
+│  │ (Nginx: React SPA)      │   │ (Nginx: React SPA)      │      │
+│  └──────────┬──────────────┘   └────────────┬────────────┘      │
+│             │                               │                   │
+│             └───────────────┬───────────────┘                   │
+│                             │ /api/ reverse proxy               │
+│                             ▼                                   │
+│              [ Service: backend (ClusterIP :5000) ]             │
+│                (Round-robin load balancing)                     │
+│                  ┌──────────┼──────────┐                        │
+│                  │          │          │                        │
+│                  ▼          ▼          ▼                        │
+│             ┌─────────┐┌─────────┐┌─────────┐                   │
+│             │ Replica ││ Replica ││ Replica │                   │
+│             │ Pod 1   ││ Pod 2   ││ Pod 3   │                   │
+│             │ (:5000) ││ (:5000) ││ (:5000) │                   │
+│             └─────────┘└─────────┘└─────────┘                   │
+│                  ▲          ▲          ▲                        │
+│                  └──────────┴──────────┘                        │
+│                Automated Liveness/Readiness                     │
+│                HTTP GET /api/health Probes                      │
+└─────────────────────────────────────────────────────────────────┘
 </pre>
 
     <h2>🚀 CI/CD Pipeline (GitHub Actions)</h2>
