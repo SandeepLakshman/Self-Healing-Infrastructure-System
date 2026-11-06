@@ -1,6 +1,6 @@
 # ShopSphere — Self-Healing E-Commerce Platform & Cloud-Native Infrastructure
 
-[![CI/CD Pipeline](https://github.com/actions/workflows/ci.yml/badge.svg)](https://github.com)
+[![CI/CD Pipeline](https://github.com/SandeepLakshman/Self-Healing-Infrastructure-System/actions/workflows/ci.yml/badge.svg)](https://github.com/SandeepLakshman/Self-Healing-Infrastructure-System/actions)
 [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Minikube-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![Node.js](https://img.shields.io/badge/Node.js-20_LTS-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
@@ -43,12 +43,16 @@ The primary objectives of this project are:
 
 ```
 [ Client Browser ]
-        │ (Port 8080)
+        │
+        │  kubectl port-forward svc/frontend 8080:80
+        │  (host port 8080 → pod port 80, local dev access)
         ▼
 ┌────────────────────────────────────────────────────────┐
 │ Kubernetes Node / Minikube                             │
 │                                                        │
-│  [ Service: frontend (NodePort 30080 -> 80) ]          │
+│  [ Service: frontend ]                                 │
+│    NodePort 30080 → pod port 80 (direct node access)  │
+│    Port-forward: 8080 → pod port 80 (dev access)      │
 │                          │                             │
 │                          ▼                             │
 │           ┌─────────────────────────────┐              │
@@ -152,8 +156,11 @@ Self Healing Infrastructure System/
 │   ├── backend-service.yaml     # Internal ClusterIP service on port 5000
 │   ├── frontend-deployment.yaml # Nginx frontend pod deployment
 │   └── frontend-service.yaml    # NodePort service on port 30080
+├── scripts/
+│   └── build_readme_html.js     # Generates standalone README.html
 ├── .gitignore
 ├── docker-compose.yml           # Local multi-container Docker compose
+├── README.html                  # Standalone offline documentation (self-contained)
 └── README.md
 ```
 
@@ -249,7 +256,7 @@ shopsphere-frontend-7dd7bbf55f-9c2r5   1/1     Running   0          10.244.0.15 
 ```
 
 ### 4. Health Probes Configuration
-Defined in [`k8s/backend-deployment.yaml`](file:///c:/Private/Hands-On/Self%20Healing%20Infrastructure%20System/k8s/backend-deployment.yaml):
+Defined in [`k8s/backend-deployment.yaml`](k8s/backend-deployment.yaml):
 - **Readiness Probe**: Queries `/api/health:5000` with `initialDelaySeconds: 5`, `periodSeconds: 5`. Traffic is only routed to the pod once this probe returns HTTP 200.
 - **Liveness Probe**: Queries `/api/health:5000` with `initialDelaySeconds: 15`, `periodSeconds: 10`, `failureThreshold: 3`. If the endpoint fails 3 consecutive times, kubelet restarts the container.
 - **Resource Constraints**:
@@ -282,15 +289,15 @@ The Kubernetes ReplicaSet controller continually reconciles desired state (3 bac
 
 3. **Observe Self-Healing Recovery**:
    - The targeted pod immediately transitions to `Terminating`.
-   - The ReplicaSet controller instantly detects that only 2 replicas remain active.
-   - A replacement pod is provisioned and transitioned to `ContainerCreating` -> `Running` within seconds.
-   - **Zero Downtime**: Active HTTP requests made to `http://localhost:8080/api/health` continue returning HTTP 200 via the remaining healthy replicas without user-visible errors.
+   - The ReplicaSet controller detects that only 2 replicas remain active.
+   - A replacement pod is provisioned and transitions from `ContainerCreating` to `Running` within seconds.
+   - The remaining healthy replicas continue serving requests via the backend `ClusterIP` service during recovery.
 
 ---
 
 ## 🚀 CI/CD Pipeline (GitHub Actions)
 
-An automated continuous integration workflow is configured at [`.github/workflows/ci.yml`](file:///c:/Private/Hands-On/Self%20Healing%20Infrastructure%20System/.github/workflows/ci.yml). It validates every commit and pull request on Ubuntu runners without requiring paid cloud infrastructure or secrets.
+An automated continuous integration workflow is configured at [`.github/workflows/ci.yml`](.github/workflows/ci.yml). It validates every commit and pull request on Ubuntu runners without requiring paid cloud infrastructure or secrets.
 
 ![ShopSphere CI/CD Workflow](./docs/images/cicd-pipeline.png)
 
@@ -300,14 +307,14 @@ An automated continuous integration workflow is configured at [`.github/workflow
    - Builds production React assets using Vite (`npm run build`).
 2. **Backend Job**:
    - Installs backend dependencies.
-   - Runs syntax integrity checks (`npm test`).
+   - Runs `npm test` which performs syntax validation on the server entry point.
 3. **Docker Build Job**:
    - Runs once frontend and backend jobs pass.
    - Builds both `shopsphere-backend` and `shopsphere-frontend` Docker images to guarantee deployment readiness.
 
 ### Pushing Code to GitHub
 ```bash
-git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPOSITORY>.git
+git remote add origin https://github.com/SandeepLakshman/Self-Healing-Infrastructure-System.git
 git branch -M main
 git push -u origin main
 ```
@@ -333,6 +340,3 @@ Track live progress under the **Actions** tab in your GitHub repository.
 | **Simulate Pod Failure** | `kubectl delete pod <backend-pod-name>` |
 
 ---
-
-## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
